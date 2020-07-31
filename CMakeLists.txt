@@ -4,3 +4,5 @@ project(ASPLab06 C)
 set(CMAKE_C_STANDARD 99)
 
 add_executable(main src/main.c)
+
+add_executable(Server src/Server.c)
