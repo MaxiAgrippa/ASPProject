@@ -190,7 +190,7 @@ void serviceClient(int clientDescriber)
                 // if the command is put, which means write file.
             else if (strcmp(command, "put") == 0)
             {
-                // open or create, and clean the file sharedFile.bin.
+                // open or create, and clean the file.
                 int fileDescriptor = open(fileName, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
                 // if something wrong with open(), open() return -1
                 if (fileDescriptor == -1)

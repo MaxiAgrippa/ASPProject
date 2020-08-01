@@ -6,3 +6,5 @@ set(CMAKE_C_STANDARD 99)
 add_executable(main src/main.c)
 
 add_executable(Server src/Server.c)
+
+add_executable(Client src/Client.c)
