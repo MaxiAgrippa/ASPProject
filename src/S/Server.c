@@ -103,7 +103,8 @@ int main(int argc, const char *argv[])
         waitpid(0, &returnStatus, WNOHANG);
         if ((WEXITSTATUS_returnStatus = WEXITSTATUS(returnStatus)) == 0)
         {
-            fprintf(stdout, "Child Process Exit: pid: %d, clientDescriber: %d, returnStatus: %d\n", pid, clientDescriber,
+            fprintf(stdout, "Child Process Exit: pid: %d, clientDescriber: %d, returnStatus: %d\n", pid,
+                    clientDescriber,
                     WEXITSTATUS_returnStatus);
         }
     }
@@ -127,8 +128,12 @@ void serviceClient(int clientDescriber)
         // when there is no message from client, skip the loop.
         if (strlen(messageFromClient) == 0)
         {
+            //TEST:
+            fprintf(stderr, "strlen(messageFromClient) = %lu\n", strlen(messageFromClient));
             continue;
         }
+
+
 
         // print the message from client.
         fprintf(stderr, "messageFromClient: %s\n", messageFromClient);
@@ -146,7 +151,7 @@ void serviceClient(int clientDescriber)
                 fprintf(stderr, "ERROR: Close socket fail, clientDescriber: %d\n", clientDescriber);
                 exit(1);
             }
-            fprintf(stderr, "clientDescriber: %d closed.\n", clientDescriber);
+            fprintf(stderr, "clientDescriber: %d closed by command.\n", clientDescriber);
             exit(0);
         }
             // check if the message contain two string variables.

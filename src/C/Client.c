@@ -27,9 +27,6 @@ int main(int argc, const char *argv[])
     struct sockaddr_in serverAddress; // server socket address
     socklen_t serverAddressLength; // server socket address length
 
-    // TEST:
-    int pid = 0;
-
     // Create a socket and assign it to the socketDescriber.
     if ((socketDescriber = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
@@ -43,6 +40,7 @@ int main(int argc, const char *argv[])
     serverAddress.sin_addr.s_addr = socketAddress; // 32-bit IP4 address
     serverAddress.sin_port = htons((uint16_t) portNumber); // 16-bit port number
 
+    // tranfer string IPv4 address to binary IPv4 address and give it to sin_addr.
     if (inet_pton(AF_INET, "127.0.0.1", &serverAddress.sin_addr) < 0)
     {
         // Error handle
