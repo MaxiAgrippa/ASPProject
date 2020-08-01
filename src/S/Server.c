@@ -71,6 +71,9 @@ int main(int argc, const char *argv[])
     // A dead loop to assign local client(child process) to each connection request.
     while (1)
     {
+        // TEST:
+        fprintf(stderr, "accepting...\n");
+
         // The server gets a socket for an incoming client connection.
         if ((clientDescriber = accept(socketDescriber, &clientAddress, &clientAddressLength)) == -1)
         {
@@ -87,20 +90,20 @@ int main(int argc, const char *argv[])
             serviceClient(clientDescriber);
         }
 
-        // TODO: why close there?
-        // close the connection.
-        if (close(clientDescriber) == -1)
-        {
-            // Error handle.
-            fprintf(stderr, "ERROR: Close socket fail, clientDescriber: %d\n", clientDescriber);
-            exit(1);
-        }
-        fprintf(stdout, "connection closed, clientDescriber: %d\n", clientDescriber);
+//        // TODO: why close there?
+//        // close the connection.
+//        if (close(clientDescriber) == -1)
+//        {
+//            // Error handle.
+//            fprintf(stderr, "ERROR: Close socket fail, clientDescriber: %d\n", clientDescriber);
+//            exit(1);
+//        }
+//        fprintf(stdout, "connection closed, clientDescriber: %d\n", clientDescriber);
         // accept children's return, avoid zombie.¬
         waitpid(0, &returnStatus, WNOHANG);
         if ((WEXITSTATUS_returnStatus = WEXITSTATUS(returnStatus)) == 0)
         {
-            fprintf(stdout, "Child Process Exit: pid: %d, clientDescriber: %d, returnStatus: %d", pid, clientDescriber,
+            fprintf(stdout, "Child Process Exit: pid: %d, clientDescriber: %d, returnStatus: %d\n", pid, clientDescriber,
                     WEXITSTATUS_returnStatus);
         }
     }
@@ -128,7 +131,7 @@ void serviceClient(int clientDescriber)
         }
 
         // print the message from client.
-        fprintf(stdout, "%s\n", messageFromClient);
+        fprintf(stderr, "messageFromClient: %s\n", messageFromClient);
 
         // check if message from client is "quit"?
         if (strcmp(messageFromClient, "quit") == 0)
@@ -143,6 +146,7 @@ void serviceClient(int clientDescriber)
                 fprintf(stderr, "ERROR: Close socket fail, clientDescriber: %d\n", clientDescriber);
                 exit(1);
             }
+            fprintf(stderr, "clientDescriber: %d closed.\n", clientDescriber);
             exit(0);
         }
             // check if the message contain two string variables.

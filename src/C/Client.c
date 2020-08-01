@@ -30,16 +30,6 @@ int main(int argc, const char *argv[])
     // TEST:
     int pid = 0;
 
-    char *message;
-
-    // htonl() converts the unsigned integer hostlong from host byte order to network byte order.
-    if ((socketAddress = inet_pton(AF_INET, "127.0.0.1", &serverAddress.sin_addr)) < 0)
-    {
-        // Error handle.
-        fprintf(stderr, "ERROR: inet_pton() fail.\n");
-        exit(1);
-    }
-
     // Create a socket and assign it to the socketDescriber.
     if ((socketDescriber = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
@@ -52,6 +42,13 @@ int main(int argc, const char *argv[])
     serverAddress.sin_family = AF_INET; //AF_INET(IPv4) or AF_INET6(IPv6)
     serverAddress.sin_addr.s_addr = socketAddress; // 32-bit IP4 address
     serverAddress.sin_port = htons((uint16_t) portNumber); // 16-bit port number
+
+    if (inet_pton(AF_INET, "127.0.0.1", &serverAddress.sin_addr) < 0)
+    {
+        // Error handle
+        fprintf(stderr, "ERROR: inet_pton() failed.\n");
+        exit(1);
+    }
 
     // Connect to the server.
     if (connect(socketDescriber, (struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0)
@@ -69,50 +66,74 @@ int main(int argc, const char *argv[])
         // print a line of hint to screen.
         fprintf(stdout, "Please enter a command to send.\n");
         // get the command from console
-        int n = scanf("%s %s", command, fileName);
-        // when there is only one string in input.
-        if (n == 1)
+        scanf("%s", command);
+        // is the command equal to "quit"?
+        if (strcmp(command, "quit") == 0)
         {
-            // is the command equal to "quit"?
-            if (strcmp(command, "quit") == 0)
+            // if it's equal to "quit", send "quit" to the server
+            if (write(socketDescriber, "quit", 4) == -1)
             {
-                // if it's equal to "quit", send "quit" to the server
-                if (write(socketDescriber, "quit", 4) == -1)
+                // error handle
+                fprintf(stderr, "ERROR: Send command quit error!\n");
+                continue;
+            }
+            // close the connection.
+            close(socketDescriber);
+            exit(0);
+        }
+            // if the command is "get"
+        else if (strcmp(command, "get") == 0)
+        {
+            // get the file name from console
+            scanf("%s", fileName);
+            // check is there a file name exist
+            if (strlen(fileName) != 0)
+            {
+                // open or create, and clean the file.
+                int fileDescriptor = open(fileName, O_RDWR | O_CREAT | O_TRUNC,
+                                          S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+                // read the file content from the socket connection.
+                char *content = readAFileFrom(socketDescriber);
+                // write the file content to the file.
+                if (write(fileDescriptor, content, sizeof(content)) == -1)
                 {
                     // error handle
-                    fprintf(stderr, "ERROR: Send command quit error!\n");
+                    fprintf(stderr, "ERROR: get command, write to file error!\n");
                     continue;
                 }
-                // close the connection.
-                close(socketDescriber);
-                exit(0);
+                // close file descriptor
+                close(fileDescriptor);
+                // free dynamic array
+                free(content);
+                // continue for the next command.
+                continue;
             }
             else
             {
                 // input exception handle.
-                fprintf(stdout, "Please enter a valid command.\n");
+                fprintf(stdout, "Please enter a valid file name.\n");
                 continue;
             }
         }
-            // when there are two strings as input.
-        else if (n == 2)
+            // if the command is "put"
+        else if (strcmp(command, "put") == 0)
         {
-            // if the command is "get"
-            if (strcmp(command, "get") == 0)
+            // get the file name from console
+            scanf("%s", fileName);
+            // check is there a file name exist
+            if (strlen(fileName) != 0)
             {
-                // check is there a file name exist
-                if (strlen(fileName) != 0)
+                // check the existence of the file
+                if (access(fileName, F_OK) != -1)
                 {
                     // open or create, and clean the file.
                     int fileDescriptor = open(fileName, O_RDWR | O_CREAT | O_TRUNC,
                                               S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-                    // read the file content from the socket connection.
-                    char *content = readAFileFrom(socketDescriber);
-                    // write the file content to the file.
-                    if (write(fileDescriptor, content, sizeof(content)) == -1)
+                    char *content = readAFileFrom(fileDescriptor);
+                    if (write(socketDescriber, content, sizeof(content)) == -1)
                     {
                         // error handle
-                        fprintf(stderr, "ERROR: get command, write to file error!\n");
+                        fprintf(stderr, "ERROR: put command, write to socket error!\n");
                         continue;
                     }
                     // close file descriptor
@@ -125,66 +146,24 @@ int main(int argc, const char *argv[])
                 else
                 {
                     // input exception handle.
-                    fprintf(stdout, "Please enter a valid file name.\n");
-                    continue;
-                }
-            }
-                // if the command is "put"
-            else if (strcmp(command, "put") == 0)
-            {
-                // check is there a file name exist
-                if (strlen(fileName) != 0)
-                {
-                    // check the existence of the file
-                    if (access(fileName, F_OK) != -1)
-                    {
-                        // open or create, and clean the file.
-                        int fileDescriptor = open(fileName, O_RDWR | O_CREAT | O_TRUNC,
-                                                  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-                        char *content = readAFileFrom(fileDescriptor);
-                        if (write(socketDescriber, content, sizeof(content)) == -1)
-                        {
-                            // error handle
-                            fprintf(stderr, "ERROR: put command, write to socket error!\n");
-                            continue;
-                        }
-                        // close file descriptor
-                        close(fileDescriptor);
-                        // free dynamic array
-                        free(content);
-                        // continue for the next command.
-                        continue;
-                    }
-                    else
-                    {
-                        // input exception handle.
-                        fprintf(stdout, "No such file called: %s\n", fileName);
-                    }
-                }
-                else
-                {
-                    // input exception handle.
-                    fprintf(stdout, "Please enter a valid file name.\n");
-                    continue;
+                    fprintf(stdout, "No such file called: %s\n", fileName);
                 }
             }
             else
             {
                 // input exception handle.
-                fprintf(stdout, "Please enter a valid command.\n");
+                fprintf(stdout, "Please enter a valid file name.\n");
                 continue;
             }
         }
-            // input exception handle
         else
         {
-            fprintf(stdout, "Please enter a command to send.\n");
-            fprintf(stdout, "[command] <file name>\n");
+            // input exception handle.
+            fprintf(stdout, "Please enter a valid command.\n");
+            fprintf(stdout, "<command> [file name]\n");
             continue;
         }
     }
-
-
 }
 
 // read a line from somewhere
