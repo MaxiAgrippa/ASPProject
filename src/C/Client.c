@@ -18,6 +18,10 @@ char *readALineFrom(int fromWhat);
 
 char *readAFileFrom(int fromWhat);
 
+char *concatenateMessage(const char *s1, const char *s2);
+
+void freeCharDynamicArray(char *array);
+
 int main(int argc, const char *argv[])
 {
     int socketDescriber; // socket Describer, return by socket()
@@ -59,8 +63,9 @@ int main(int argc, const char *argv[])
     // inside a dead loop
     while (1)
     {
-        char command[256]; // Store command
-        char fileName[256]; // Store file name
+        char *command = (char *) malloc(sizeof(char) * 256); // Store command
+        char *fileName = (char *) malloc(sizeof(char) * 256); // Store file name
+        char EOT = 4; // end of transmit.
         // print a line of hint to screen.
         fprintf(stdout, "Please enter a command to send.\n");
         // get the command from console
@@ -69,14 +74,17 @@ int main(int argc, const char *argv[])
         if (strcmp(command, "quit") == 0)
         {
             // if it's equal to "quit", send "quit" to the server
-            if (write(socketDescriber, "quit", 4) == -1)
+            if (write(socketDescriber, command, strlen(command)) == -1)
             {
                 // error handle
                 fprintf(stderr, "ERROR: Send command quit error!\n");
-                continue;
+                exit(1);
             }
             // close the connection.
             close(socketDescriber);
+            // free dynamic array.
+            freeCharDynamicArray(command);
+            freeCharDynamicArray(fileName);
             exit(0);
         }
             // if the command is "get"
@@ -87,29 +95,98 @@ int main(int argc, const char *argv[])
             // check is there a file name exist
             if (strlen(fileName) != 0)
             {
-                // open or create, and clean the file.
-                int fileDescriptor = open(fileName, O_RDWR | O_CREAT | O_TRUNC,
-                                          S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+                // format the message to server.
+                char *message = concatenateMessage(command, fileName);
+
+                // TEST: command gonna send:
+                fprintf(stderr, "Sending Command: %s\n", message);
+
+                // send message to server.
+                if (write(socketDescriber, message, strlen(message)) == -1)
+                {
+                    // error handle
+                    fprintf(stderr, "ERROR: get command, send message to server error!\n");
+                    // free dynamic array
+                    freeCharDynamicArray(message);
+                    freeCharDynamicArray(command);
+                    freeCharDynamicArray(fileName);
+                    continue; // go to the next loop
+                }
+                // Show a message represent working.
+                fprintf(stderr, "getting file...\n");
                 // read the file content from the socket connection.
                 char *content = readAFileFrom(socketDescriber);
+                // check if there is the file content or not.
+                if (strlen(content) == 0)
+                {
+                    // ERROR: Something wrong from here.
+                    fprintf(stderr, "Get File Error: %s can not access.\n", fileName);
+                    // free dynamic arrays
+                    freeCharDynamicArray(content);
+                    freeCharDynamicArray(message);
+                    freeCharDynamicArray(command);
+                    freeCharDynamicArray(fileName);
+                    continue; // go to the next loop
+                }
+                // check the message from server is "No such file." or not.
+                if (strcmp(content, "No such file.") == 0)
+                {
+                    // show an error message.
+                    fprintf(stderr, "Get File Error: %s, no such file.\n", fileName);
+                    // free dynamic arrays
+                    freeCharDynamicArray(content);
+                    freeCharDynamicArray(message);
+                    freeCharDynamicArray(command);
+                    freeCharDynamicArray(fileName);
+                    continue; // go to the next loop
+                }
+                // open or create, and clean the file to write.
+                int fileDescriptor = open(fileName, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+                // if something wrong with open(), open() return -1
+                if (fileDescriptor == -1)
+                {
+                    // show an error message and exit.
+                    fprintf(stderr, "PUT ERROR: open file error!\n");
+                    // free dynamic arrays
+                    freeCharDynamicArray(content);
+                    freeCharDynamicArray(message);
+                    freeCharDynamicArray(command);
+                    freeCharDynamicArray(fileName);
+                    continue; // go to the next loop
+                }
                 // write the file content to the file.
-                if (write(fileDescriptor, content, sizeof(content)) == -1)
+                if (write(fileDescriptor, content, strlen(content)) == -1)
                 {
                     // error handle
                     fprintf(stderr, "ERROR: get command, write to file error!\n");
-                    continue;
+                    // free dynamic arrays
+                    freeCharDynamicArray(content);
+                    freeCharDynamicArray(message);
+                    freeCharDynamicArray(command);
+                    freeCharDynamicArray(fileName);
+                    // close fileDescriptor
+                    close(fileDescriptor);
+                    continue; // go to the next loop
                 }
                 // close file descriptor
                 close(fileDescriptor);
-                // free dynamic array
-                free(content);
-                // continue for the next command.
-                continue;
+                // free dynamic arrays
+                freeCharDynamicArray(content);
+                freeCharDynamicArray(message);
+                freeCharDynamicArray(command);
+                freeCharDynamicArray(fileName);
+                // Show a success message.
+                fprintf(stderr, "SUCCESS: get %s success.\n\n", fileName);
+                // get file transfer finished
+                continue; // go to the next loop
             }
             else
             {
                 // input exception handle.
-                fprintf(stdout, "Please enter a valid file name.\n");
+                fprintf(stdout, "Please enter with a file name.\n");
+                // free dynamic arrays
+                freeCharDynamicArray(command);
+                freeCharDynamicArray(fileName);
                 continue;
             }
         }
@@ -124,41 +201,91 @@ int main(int argc, const char *argv[])
                 // check the existence of the file
                 if (access(fileName, F_OK) != -1)
                 {
+                    // format message to server.
+                    char *message = concatenateMessage(command, fileName);
+                    // send message to server.
+                    if (write(socketDescriber, message, strlen(message)) == -1)
+                    {
+                        // error handle
+                        fprintf(stderr, "ERROR: put command, send message to server error!\n");
+                        // free dynamic arrays.
+                        freeCharDynamicArray(message);
+                        freeCharDynamicArray(command);
+                        freeCharDynamicArray(fileName);
+                        continue; // go to the next loop
+                    }
                     // open or create, and clean the file.
-                    int fileDescriptor = open(fileName, O_RDWR | O_CREAT | O_TRUNC,
-                                              S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+                    int fileDescriptor = open(fileName, O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+                    // set file position to the beginning of the file.
+                    lseek(fileDescriptor, 0, SEEK_SET);
+                    // get file content from local fileDescriptor
                     char *content = readAFileFrom(fileDescriptor);
-                    if (write(socketDescriber, content, sizeof(content)) == -1)
+                    // ERROR: SERVER ERROR!!!SERVER ERROR!!!SERVER ERROR!!!SERVER ERROR!!!SERVER ERROR!!!SERVER ERROR!!!
+                    // write file content to server
+                    if (write(socketDescriber, content, strlen(content)) == -1)
                     {
                         // error handle
                         fprintf(stderr, "ERROR: put command, write to socket error!\n");
-                        continue;
+                        // free dynamic arrays
+                        freeCharDynamicArray(content);
+                        freeCharDynamicArray(message);
+                        freeCharDynamicArray(command);
+                        freeCharDynamicArray(fileName);
+                        continue; // go to the next loop
+                    }
+                    // FIXME: Is this useful?
+                    // send EOT to client.
+                    if (write(socketDescriber, &EOT, 1) == -1)
+                    {
+                        // error handle
+                        fprintf(stderr, "GET ERROR: write EOT to client error!\n");
+                        // free dynamic arrays
+                        freeCharDynamicArray(content);
+                        freeCharDynamicArray(message);
+                        freeCharDynamicArray(command);
+                        freeCharDynamicArray(fileName);
+                        continue; // go to the next loop
                     }
                     // close file descriptor
                     close(fileDescriptor);
-                    // free dynamic array
-                    free(content);
-                    // continue for the next command.
-                    continue;
+                    // free dynamic arrays
+                    freeCharDynamicArray(content);
+                    freeCharDynamicArray(message);
+                    freeCharDynamicArray(command);
+                    freeCharDynamicArray(fileName);
+                    // Show a success message.
+                    fprintf(stderr, "SUCCESS: put %s success.\n\n", fileName);
+                    // put file transfer finished
+                    continue; // go to the next loop
                 }
-                else
+                else // if file is not exit.
                 {
                     // input exception handle.
                     fprintf(stdout, "No such file called: %s\n", fileName);
+                    // free dynamic arrays
+                    freeCharDynamicArray(command);
+                    freeCharDynamicArray(fileName);
+                    continue;
                 }
             }
-            else
+            else // if file name is empty.
             {
                 // input exception handle.
                 fprintf(stdout, "Please enter a valid file name.\n");
+                // free dynamic arrays
+                freeCharDynamicArray(command);
+                freeCharDynamicArray(fileName);
                 continue;
             }
         }
         else
         {
             // input exception handle.
-            fprintf(stdout, "Please enter a valid command.\n");
+            fprintf(stdout, "Please enter with a file name.\n");
             fprintf(stdout, "<command> [file name]\n");
+            // free dynamic arrays
+            freeCharDynamicArray(command);
+            freeCharDynamicArray(fileName);
             continue;
         }
     }
@@ -227,4 +354,26 @@ char *readAFileFrom(int fromWhat)
         i++;
     }
     return inputFile;
+}
+
+char *concatenateMessage(const char *s1, const char *s2)
+{
+    const size_t len1 = strlen(s1); // string s1 length
+    const size_t len2 = strlen(s2); // string s2 length
+    char *result = (char *) malloc((len1 + len2 + 1 + 1) * sizeof(char)); // +1 for " ", +1 for the null-terminator
+    memcpy(result, s1, len1); // put s1 in result
+    memcpy(result + len1, " ", 1); // put " " in result
+    memcpy(result + len1 + 1, s2, len2); // put s2 in result
+    memcpy(result + len1 + 1 + len2, "\0", len2 + 1 + 1); // +1 to copy the null-terminator
+    return result;
+}
+
+// free char dynamic array.
+void freeCharDynamicArray(char *array)
+{
+    if (array != NULL)
+    {
+        free(array);
+        array = NULL;
+    }
 }
