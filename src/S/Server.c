@@ -134,20 +134,33 @@ void serviceClient(int clientDescriber)
 
         // show a message that indicate running.
         fprintf(stderr, "waiting for command...\n");
+
         // get the message from client.
-        messageFromClient = readALineFrom(clientDescriber);
+//        messageFromClient = readALineFrom(clientDescriber);
         // TEST: using fix size malloc to reduce factors.
-//        messageFromClient = (char *) malloc(sizeof(char) * 255);
-//        read(clientDescriber, messageFromClient, 255);
+        messageFromClient = (char *) malloc(sizeof(char) * 255);
+        int i = read(clientDescriber, messageFromClient, 255);
+
+        // -1 indicate something wrong with the connection.
+        if (i == -1)
+        {
+            // free dynamic array
+            freeCharDynamicArray(messageFromClient);
+            freeCharDynamicArray(command);
+            freeCharDynamicArray(fileName);
+            exit(1); // child process exit.
+
+        }
 
         // when there is no message from client, skip the loop.
         if (strlen(messageFromClient) == 0)
         {
             // TODO: fix potential error
-            // free messageFromClient.
+            // free dynamic array
             freeCharDynamicArray(messageFromClient);
-            // go to the beginning of the loop.
-            continue;
+            freeCharDynamicArray(command);
+            freeCharDynamicArray(fileName);
+            continue; // go to the next loop.
         }
 
         // print the message from client.
@@ -160,12 +173,6 @@ void serviceClient(int clientDescriber)
             freeCharDynamicArray(messageFromClient);
             freeCharDynamicArray(command);
             freeCharDynamicArray(fileName);
-            if (close(clientDescriber) == -1)
-            {
-                // Error handle.
-                fprintf(stderr, "ERROR: Close socket fail, clientDescriber: %d\n", clientDescriber);
-                exit(1);
-            }
             fprintf(stderr, "clientDescriber: %d closed by client command.\n\n", clientDescriber);
             exit(0);
         }
@@ -192,7 +199,13 @@ void serviceClient(int clientDescriber)
                     {
                         // show an error message and exit.
                         fprintf(stderr, "GET ERROR: open file error!\n");
-                        exit(1);
+                        // free malloc the char array
+                        freeCharDynamicArray(messageFromClient);
+                        freeCharDynamicArray(command);
+                        freeCharDynamicArray(fileName);
+                        // close the opening file descriptor
+                        close(fileDescriptor);
+                        exit(1); // error exit child thread
                     }
                     // FIXME: Is it necessary?
                     // set file position to the beginning of the file.
@@ -206,30 +219,50 @@ void serviceClient(int clientDescriber)
                     {
                         // error handle
                         fprintf(stderr, "GET ERROR: write file to client error!\n");
-                        exit(1);
+                        // free malloc the char array
+                        freeCharDynamicArray(fileContent);
+                        freeCharDynamicArray(command);
+                        freeCharDynamicArray(fileName);
+                        freeCharDynamicArray(messageFromClient);
+                        // close the opening file descriptor
+                        close(fileDescriptor);
+                        exit(1); // error exit child thread
                     }
                     // show a message that indicate the file transfer is successfully finished.
                     fprintf(stderr, "GET SUCCESS: File tranfer finished.\n\n");
 
                     // FIXME: Is this useful?
+                    /**
                     // send EOT to client.
                     if (write(clientDescriber, &EOT, 1) == -1)
                     {
                         // error handle
                         fprintf(stderr, "GET ERROR: write EOT to client error!\n");
-                        exit(1);
+                        // free malloc the char array
+                        freeCharDynamicArray(fileContent);
+                        freeCharDynamicArray(command);
+                        freeCharDynamicArray(fileName);
+                        freeCharDynamicArray(messageFromClient);
+                        // close the opening file descriptor
+                        close(fileDescriptor);
+                        exit(1); // error exit child thread
                     }
+                     **/
 
                     // free the dynamic char array
                     freeCharDynamicArray(fileContent);
+                    freeCharDynamicArray(command);
+                    freeCharDynamicArray(fileName);
                     // close the opening file descriptor
                     close(fileDescriptor);
+                    // go to the next loop.
+                    continue;
                 }
                 else // if no such file called fileName
                 {
                     fprintf(stderr, "GET ERROR: File not exist.\n");
                     // write an error message to the client.
-                    if (write(clientDescriber, "No such file.", 13) == -1)
+                    if (write(clientDescriber, "No such file.\004", 14) == -1)
                     {
                         // error handle
                         fprintf(stderr, "GET ERROR: write message to client error!\n");
@@ -239,12 +272,11 @@ void serviceClient(int clientDescriber)
                     free(messageFromClient);
                     freeCharDynamicArray(command);
                     freeCharDynamicArray(fileName);
-                    // close socket, prepare the exit.
-                    close(clientDescriber);
+                    // go to the next loop.
+                    continue;
                 }
-                //TEST:
-                // exit the dead loop no matter success or not.
-//                condition = 0;
+                // exit if something horrible happend.
+                condition = 0;
             }
                 // if the command is put, which means write file.
             else if (strcmp(command, "put") == 0)
@@ -260,13 +292,11 @@ void serviceClient(int clientDescriber)
                     // if it's empty:
                     fprintf(stderr, "PUT ERROR: received empty file error.\n");
                     // free malloc the char array
-                    if (fileContent != NULL)
-                    {
-                        free(fileContent);
-                        fileContent = NULL;
-                    }
-                    // get out of the dead loop.
-                    condition = 0;
+                    freeCharDynamicArray(fileContent);
+                    freeCharDynamicArray(command);
+                    freeCharDynamicArray(fileName);
+                    freeCharDynamicArray(messageFromClient);
+                    // go to the next loop.
                     continue;
                 }
 
@@ -278,12 +308,11 @@ void serviceClient(int clientDescriber)
                     // show an error message and exit.
                     fprintf(stderr, "PUT ERROR: open file error!\n");
                     // free malloc the char array
-                    if (fileContent != NULL)
-                    {
-                        free(fileContent);
-                        fileContent = NULL;
-                    }
-                    exit(1);
+                    freeCharDynamicArray(fileContent);
+                    freeCharDynamicArray(command);
+                    freeCharDynamicArray(fileName);
+                    freeCharDynamicArray(messageFromClient);
+                    exit(1); // error exit child thread
                 }
 
                 // write file content to local fileDescriptor.
@@ -292,14 +321,13 @@ void serviceClient(int clientDescriber)
                     // error handle
                     fprintf(stderr, "PUT ERROR: write local file error!\n");
                     // free malloc the char array
-                    if (fileContent != NULL)
-                    {
-                        free(fileContent);
-                        fileContent = NULL;
-                    }
+                    freeCharDynamicArray(fileContent);
+                    freeCharDynamicArray(command);
+                    freeCharDynamicArray(fileName);
+                    freeCharDynamicArray(messageFromClient);
                     // close the opening file descriptor
                     close(fileDescriptor);
-                    exit(1);
+                    exit(1); // error exit child thread
                 }
 
                 /**
@@ -337,15 +365,14 @@ void serviceClient(int clientDescriber)
                 fprintf(stderr, "PUT SUCCESS: File tranfer finished.\n\n");
 
                 // free malloc the char array
-                if (fileContent != NULL)
-                {
-                    free(fileContent);
-                    fileContent = NULL;
-                }
+                freeCharDynamicArray(fileContent);
+                freeCharDynamicArray(command);
+                freeCharDynamicArray(fileName);
+                freeCharDynamicArray(messageFromClient);
                 // close the opening file descriptor
                 close(fileDescriptor);
-                // get out of the dead loop.
-                condition = 0;
+                // go to the next loop.
+                continue;
             }
             else // exception handle
             {
@@ -355,11 +382,11 @@ void serviceClient(int clientDescriber)
                 freeCharDynamicArray(messageFromClient);
                 freeCharDynamicArray(command);
                 freeCharDynamicArray(fileName);
-                // close the client socket.
-                close(clientDescriber);
-                // get out of the dead loop.
-                condition = 0;
+                // go to the next loop.
+                continue;
             }
+            // exit if something horrible happend.
+            condition = 0;
         }
         else // exception handle
         {
@@ -369,11 +396,10 @@ void serviceClient(int clientDescriber)
             freeCharDynamicArray(messageFromClient);
             freeCharDynamicArray(command);
             freeCharDynamicArray(fileName);
-            // close the client socket.
-            close(clientDescriber);
-            // exit.
-            exit(0);
+            // go to the next loop.
+            continue;
         }
+        // exit if something horrible happend.
     }
     // out side of the dead loop
     // free dynamic array.

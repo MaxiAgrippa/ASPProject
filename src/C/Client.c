@@ -129,7 +129,7 @@ int main(int argc, const char *argv[])
                     continue; // go to the next loop
                 }
                 // check the message from server is "No such file." or not.
-                if (strcmp(content, "No such file.") == 0)
+                if (strcmp(content, "No such file.\004") == 0)
                 {
                     // show an error message.
                     fprintf(stderr, "Get File Error: %s, no such file.\n", fileName);
@@ -234,6 +234,7 @@ int main(int argc, const char *argv[])
                         continue; // go to the next loop
                     }
                     // FIXME: Is this useful?
+                    /**
                     // send EOT to client.
                     if (write(socketDescriber, &EOT, 1) == -1)
                     {
@@ -246,6 +247,7 @@ int main(int argc, const char *argv[])
                         freeCharDynamicArray(fileName);
                         continue; // go to the next loop
                     }
+                    **/
                     // close file descriptor
                     close(fileDescriptor);
                     // free dynamic arrays
@@ -336,7 +338,6 @@ char *readAFileFrom(int fromWhat)
     char *inputFile = (char *) malloc(64 * sizeof(char));
     // initial inputFile size
     int inputFileSize = 64;
-
     // when there is next byte got read.
     while (read(fromWhat, &tmp, 1) > 0)
     {
@@ -350,12 +351,17 @@ char *readAFileFrom(int fromWhat)
         }
         // add the char to the end of the inputFile.
         inputFile[i] = tmp;
+        if (tmp == '\004')
+        {
+            break;
+        }
         // increase i to index on the next using unit.
         i++;
     }
     return inputFile;
 }
 
+// concatenate two string to one Message.
 char *concatenateMessage(const char *s1, const char *s2)
 {
     const size_t len1 = strlen(s1); // string s1 length
