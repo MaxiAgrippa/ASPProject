@@ -179,7 +179,7 @@ void serviceClient(int clientDescriber)
             // check if the message contain two string variables.
         else if (sscanf(messageFromClient, "%s %s", command, fileName) == 2)
         {
-            // TEST: Show the command and file name.
+            // echo command and fileName.
             fprintf(stderr, "command: %s fileName: %s\n", command, fileName);
 
             // if the command is get, which means read file.
@@ -229,7 +229,6 @@ void serviceClient(int clientDescriber)
                         close(fileDescriptor);
                         exit(1); // error exit child thread
                     }
-
                     // show a message that indicate the file transfer is successfully finished.
                     fprintf(stderr, "GET SUCCESS: File tranfer finished.\n\n");
 
@@ -259,13 +258,25 @@ void serviceClient(int clientDescriber)
                 }
                 else // if no such file called fileName
                 {
-                    fprintf(stderr, "GET ERROR: File not exist.\n");
+                    fprintf(stderr, "GET ERROR: File not exist.\n\n");
                     // write an error message to the client.
-                    if (write(clientDescriber, "No such file.\004", 15) == -1)
+                    if (write(clientDescriber, "No such file.", 14) == -1)
                     {
                         // error handle
-                        fprintf(stderr, "GET ERROR: write message to client error!\n");
+                        fprintf(stderr, "GET ERROR: write message to client error!\n\n");
                         exit(1);
+                    }
+                    // send EOT to client.
+                    if (write(clientDescriber, &EOT, 1) == -1)
+                    {
+                        // error handle
+                        fprintf(stderr, "GET ERROR: write EOT to client error!\n");
+                        // free malloc the char array
+                        freeCharDynamicArray(command);
+                        freeCharDynamicArray(fileName);
+                        freeCharDynamicArray(messageFromClient);
+                        // close the opening file descriptor
+                        exit(1); // error exit child thread
                     }
                     // free dynamic arrays.
                     free(messageFromClient);
@@ -376,7 +387,7 @@ void serviceClient(int clientDescriber)
             else // exception handle
             {
                 // if the command is neither get or put.
-                fprintf(stderr, "unknown command.\n");
+                fprintf(stderr, "unknown command.\n\n");
                 // free dynamic arrays.
                 freeCharDynamicArray(messageFromClient);
                 freeCharDynamicArray(command);
@@ -390,7 +401,7 @@ void serviceClient(int clientDescriber)
         else // exception handle
         {
             // if the message does not contain two string variables.
-            fprintf(stderr, "Client message format dis-match.\n");
+            fprintf(stderr, "Client message format dis-match.\n\n");
             // free dynamic arrays.
             freeCharDynamicArray(messageFromClient);
             freeCharDynamicArray(command);
@@ -471,6 +482,11 @@ char *readAFileFrom(int fromWhat)
             inputFileSize *= 2;
             // re-allocate the inputFile to double the size.
             inputFile = realloc(inputFile, inputFileSize * sizeof(char));
+        }
+        // if the char equal to EOT(end of transmit)
+        if (tmp == '\004')
+        {
+            break; // break the loop since it's the last of the file.
         }
         // add the char to the end of the inputFile.
         inputFile[i] = tmp;

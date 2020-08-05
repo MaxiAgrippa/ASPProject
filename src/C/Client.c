@@ -105,7 +105,7 @@ int main(int argc, const char *argv[])
                 if (write(socketDescriber, message, strlen(message) + 1) == -1)
                 {
                     // error handle
-                    fprintf(stderr, "ERROR: get command, send message to server error!\n");
+                    fprintf(stderr, "ERROR: get command, send message to server error!\n\n");
                     // free dynamic array
                     freeCharDynamicArray(message);
                     freeCharDynamicArray(command);
@@ -116,11 +116,12 @@ int main(int argc, const char *argv[])
                 fprintf(stderr, "getting file...\n");
                 // read the file content from the socket connection.
                 char *content = readAFileFrom(socketDescriber);
+
                 // check if there is the file content or not.
                 if (strlen(content) == 0)
                 {
                     // ERROR: Something wrong from here.
-                    fprintf(stderr, "Get File Error: %s cannot access.\n", fileName);
+                    fprintf(stderr, "Get File Error: %s cannot access.\n\n", fileName);
                     // free dynamic arrays
                     freeCharDynamicArray(content);
                     freeCharDynamicArray(message);
@@ -129,10 +130,10 @@ int main(int argc, const char *argv[])
                     continue; // go to the next loop
                 }
                 // check the message from server is "No such file." or not.
-                if (strcmp(content, "No such file.\004") == 0)
+                if (strcmp(content, "No such file.") == 0)
                 {
                     // show an error message.
-                    fprintf(stderr, "Get File Error: %s, no such file.\n", fileName);
+                    fprintf(stderr, "Get File Error: %s, no such file.\n\n", fileName);
                     // free dynamic arrays
                     freeCharDynamicArray(content);
                     freeCharDynamicArray(message);
@@ -146,7 +147,7 @@ int main(int argc, const char *argv[])
                 if (fileDescriptor == -1)
                 {
                     // show an error message and exit.
-                    fprintf(stderr, "PUT ERROR: open file error!\n");
+                    fprintf(stderr, "PUT ERROR: open file error!\n\n");
                     // free dynamic arrays
                     freeCharDynamicArray(content);
                     freeCharDynamicArray(message);
@@ -158,7 +159,7 @@ int main(int argc, const char *argv[])
                 if (write(fileDescriptor, content, strlen(content)) == -1)
                 {
                     // error handle
-                    fprintf(stderr, "ERROR: get command, write to file error!\n");
+                    fprintf(stderr, "ERROR: get command, write to file error!\n\n");
                     // free dynamic arrays
                     freeCharDynamicArray(content);
                     freeCharDynamicArray(message);
@@ -183,7 +184,7 @@ int main(int argc, const char *argv[])
             else
             {
                 // input exception handle.
-                fprintf(stdout, "Please enter with a file name.\n");
+                fprintf(stdout, "Please enter with a file name.\n\n");
                 // free dynamic arrays
                 freeCharDynamicArray(command);
                 freeCharDynamicArray(fileName);
@@ -207,7 +208,7 @@ int main(int argc, const char *argv[])
                     if (write(socketDescriber, message, strlen(message) + 1) == -1)
                     {
                         // error handle
-                        fprintf(stderr, "ERROR: put command, send message to server error!\n");
+                        fprintf(stderr, "ERROR: put command, send message to server error!\n\n");
                         // free dynamic arrays.
                         freeCharDynamicArray(message);
                         freeCharDynamicArray(command);
@@ -225,29 +226,30 @@ int main(int argc, const char *argv[])
                     if (write(socketDescriber, content, strlen(content) + 1) == -1)
                     {
                         // error handle
-                        fprintf(stderr, "ERROR: put command, write to socket error!\n");
+                        fprintf(stderr, "ERROR: put command, write to socket error!\n\n");
                         // free dynamic arrays
                         freeCharDynamicArray(content);
                         freeCharDynamicArray(message);
                         freeCharDynamicArray(command);
                         freeCharDynamicArray(fileName);
+                        close(fileDescriptor); // close file descriptor.
                         continue; // go to the next loop
                     }
-                    // FIXME: Is this useful?
-                    /**
+
                     // send EOT to client.
                     if (write(socketDescriber, &EOT, 1) == -1)
                     {
                         // error handle
-                        fprintf(stderr, "GET ERROR: write EOT to client error!\n");
+                        fprintf(stderr, "GET ERROR: write EOT to client error!\n\n");
                         // free dynamic arrays
                         freeCharDynamicArray(content);
                         freeCharDynamicArray(message);
                         freeCharDynamicArray(command);
                         freeCharDynamicArray(fileName);
+                        close(fileDescriptor); // close file descriptor.
                         continue; // go to the next loop
                     }
-                    **/
+
                     // close file descriptor
                     close(fileDescriptor);
                     // free dynamic arrays
@@ -263,7 +265,7 @@ int main(int argc, const char *argv[])
                 else // if file is not exit.
                 {
                     // input exception handle.
-                    fprintf(stdout, "No such file called: %s\n", fileName);
+                    fprintf(stdout, "No such file called: %s\n\n", fileName);
                     // free dynamic arrays
                     freeCharDynamicArray(command);
                     freeCharDynamicArray(fileName);
@@ -273,7 +275,7 @@ int main(int argc, const char *argv[])
             else // if file name is empty.
             {
                 // input exception handle.
-                fprintf(stdout, "Please enter a valid file name.\n");
+                fprintf(stdout, "Please enter a valid file name.\n\n");
                 // free dynamic arrays
                 freeCharDynamicArray(command);
                 freeCharDynamicArray(fileName);
@@ -284,7 +286,7 @@ int main(int argc, const char *argv[])
         {
             // input exception handle.
             fprintf(stdout, "Please enter with a file name.\n");
-            fprintf(stdout, "<command> [file name]\n");
+            fprintf(stdout, "<command> [file name]\n\n");
             // free dynamic arrays
             freeCharDynamicArray(command);
             freeCharDynamicArray(fileName);
@@ -357,12 +359,13 @@ char *readAFileFrom(int fromWhat)
             // re-allocate the inputFile to double the size.
             inputFile = realloc(inputFile, inputFileSize * sizeof(char));
         }
-        // add the char to the end of the inputFile.
-        inputFile[i] = tmp;
+        // if the char equal to EOT(end of transmit)
         if (tmp == '\004')
         {
-            break;
+            break; // break the loop since it's the last of the file.
         }
+        // add the char to the end of the inputFile.
+        inputFile[i] = tmp;
         // increase i to index on the next using unit.
         i++;
     }
