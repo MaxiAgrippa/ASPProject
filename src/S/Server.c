@@ -212,10 +212,15 @@ void serviceClient(int clientDescriber)
                     lseek(fileDescriptor, 0, SEEK_SET);
                     // read a file from fileDescriptor
                     fileContent = readAFileFrom(fileDescriptor);
+
+                    // TEST:
+                    fprintf(stderr, "fileContent: %s\n", fileContent);
+
                     // show a message that indicate the file transfer is begin.
                     fprintf(stderr, "file gonna send.\n");
                     // send file content to client.
-                    if (write(clientDescriber, fileContent, strlen(fileContent)) == -1)
+                    // ERROR: SOMETHING BLOCK THE write()?
+                    if (write(clientDescriber, fileContent, strlen(fileContent) + 1) == -1)
                     {
                         // error handle
                         fprintf(stderr, "GET ERROR: write file to client error!\n");
@@ -228,6 +233,10 @@ void serviceClient(int clientDescriber)
                         close(fileDescriptor);
                         exit(1); // error exit child thread
                     }
+
+                    // TEST:
+                    fprintf(stderr, "fileContent: %s\n", fileContent);
+
                     // show a message that indicate the file transfer is successfully finished.
                     fprintf(stderr, "GET SUCCESS: File tranfer finished.\n\n");
 
@@ -262,7 +271,7 @@ void serviceClient(int clientDescriber)
                 {
                     fprintf(stderr, "GET ERROR: File not exist.\n");
                     // write an error message to the client.
-                    if (write(clientDescriber, "No such file.\004", 14) == -1)
+                    if (write(clientDescriber, "No such file.\004", 15) == -1)
                     {
                         // error handle
                         fprintf(stderr, "GET ERROR: write message to client error!\n");
@@ -420,7 +429,8 @@ char *readALineFrom(int fromWhat)
     char *inputLine = (char *) malloc(64 * sizeof(char));
     // initial inputLine size
     int inputLineSize = 64;
-
+    // Error capture.
+    int returnNumber;
     // when there is next byte got read.
     while (read(fromWhat, &tmp, 1) > 0)
     {
@@ -440,6 +450,11 @@ char *readALineFrom(int fromWhat)
         // increase i to index on the next using unit.
         i++;
     }
+    // check is there an error from read.
+    if (returnNumber < 0)
+    {
+        fprintf(stderr, "Function Error: readALineFrom(), returnNumber: %d\n\n", returnNumber);
+    }
     return inputLine;
 }
 
@@ -454,7 +469,8 @@ char *readAFileFrom(int fromWhat)
     char *inputFile = (char *) malloc(64 * sizeof(char));
     // initial inputFile size
     int inputFileSize = 64;
-
+    // Error capture.
+    int returnNumber;
     // when there is next byte got read.
     while (read(fromWhat, &tmp, 1) > 0)
     {
@@ -470,6 +486,11 @@ char *readAFileFrom(int fromWhat)
         inputFile[i] = tmp;
         // increase i to index on the next using unit.
         i++;
+    }
+    // check is there an error from read.
+    if (returnNumber < 0)
+    {
+        fprintf(stderr, "Function Error: readAFileFrom(), returnNumber: %d\n\n", returnNumber);
     }
     return inputFile;
 }

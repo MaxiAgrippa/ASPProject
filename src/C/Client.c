@@ -74,7 +74,7 @@ int main(int argc, const char *argv[])
         if (strcmp(command, "quit") == 0)
         {
             // if it's equal to "quit", send "quit" to the server
-            if (write(socketDescriber, command, strlen(command)) == -1)
+            if (write(socketDescriber, command, strlen(command) + 1) == -1)
             {
                 // error handle
                 fprintf(stderr, "ERROR: Send command quit error!\n");
@@ -102,7 +102,7 @@ int main(int argc, const char *argv[])
                 fprintf(stderr, "Sending Command: %s\n", message);
 
                 // send message to server.
-                if (write(socketDescriber, message, strlen(message)) == -1)
+                if (write(socketDescriber, message, strlen(message) + 1) == -1)
                 {
                     // error handle
                     fprintf(stderr, "ERROR: get command, send message to server error!\n");
@@ -128,6 +128,8 @@ int main(int argc, const char *argv[])
                     freeCharDynamicArray(fileName);
                     continue; // go to the next loop
                 }
+                // TEST:
+                fprintf(stderr, "content: %s\n", content);
                 // check the message from server is "No such file." or not.
                 if (strcmp(content, "No such file.\004") == 0)
                 {
@@ -204,7 +206,7 @@ int main(int argc, const char *argv[])
                     // format message to server.
                     char *message = concatenateMessage(command, fileName);
                     // send message to server.
-                    if (write(socketDescriber, message, strlen(message)) == -1)
+                    if (write(socketDescriber, message, strlen(message) + 1) == -1)
                     {
                         // error handle
                         fprintf(stderr, "ERROR: put command, send message to server error!\n");
@@ -222,7 +224,7 @@ int main(int argc, const char *argv[])
                     char *content = readAFileFrom(fileDescriptor);
                     // ERROR: SERVER ERROR!!!SERVER ERROR!!!SERVER ERROR!!!SERVER ERROR!!!SERVER ERROR!!!SERVER ERROR!!!
                     // write file content to server
-                    if (write(socketDescriber, content, strlen(content)) == -1)
+                    if (write(socketDescriber, content, strlen(content) + 1) == -1)
                     {
                         // error handle
                         fprintf(stderr, "ERROR: put command, write to socket error!\n");
@@ -304,9 +306,10 @@ char *readALineFrom(int fromWhat)
     char *inputLine = (char *) malloc(64 * sizeof(char));
     // initial inputLine size
     int inputLineSize = 64;
-
+    // Error capture.
+    int returnNumber;
     // when there is next byte got read.
-    while (read(fromWhat, &tmp, 1) > 0)
+    while ((returnNumber = read(fromWhat, &tmp, 1)) > 0)
     {
         // if the index used in inputLine is bigger or equal to the inputLine size.
         if (i >= inputLineSize)
@@ -324,6 +327,11 @@ char *readALineFrom(int fromWhat)
         // increase i to index on the next using unit.
         i++;
     }
+    // check is there an error from read.
+    if (returnNumber < 0)
+    {
+        fprintf(stderr, "Function Error: readALineFrom(), returnNumber: %d\n\n", returnNumber);
+    }
     return inputLine;
 }
 
@@ -338,8 +346,10 @@ char *readAFileFrom(int fromWhat)
     char *inputFile = (char *) malloc(64 * sizeof(char));
     // initial inputFile size
     int inputFileSize = 64;
+    // Error capture.
+    int returnNumber;
     // when there is next byte got read.
-    while (read(fromWhat, &tmp, 1) > 0)
+    while ((returnNumber = read(fromWhat, &tmp, 1)) > 0)
     {
         // if the index used in inputFile is bigger or equal to the inputFile size.
         if (i >= inputFileSize)
@@ -357,6 +367,11 @@ char *readAFileFrom(int fromWhat)
         }
         // increase i to index on the next using unit.
         i++;
+    }
+    // check is there an error from read.
+    if (returnNumber < 0)
+    {
+        fprintf(stderr, "Function Error: readAFileFrom(), returnNumber: %d\n\n", returnNumber);
     }
     return inputFile;
 }
