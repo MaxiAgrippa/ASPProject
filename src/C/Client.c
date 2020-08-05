@@ -98,7 +98,7 @@ int main(int argc, const char *argv[])
                 // format the message to server.
                 char *message = concatenateMessage(command, fileName);
 
-                // TEST: command gonna send:
+                // echo the command gonna send:
                 fprintf(stderr, "Sending Command: %s\n", message);
 
                 // send message to server.
@@ -120,7 +120,7 @@ int main(int argc, const char *argv[])
                 if (strlen(content) == 0)
                 {
                     // ERROR: Something wrong from here.
-                    fprintf(stderr, "Get File Error: %s can not access.\n", fileName);
+                    fprintf(stderr, "Get File Error: %s cannot access.\n", fileName);
                     // free dynamic arrays
                     freeCharDynamicArray(content);
                     freeCharDynamicArray(message);
@@ -128,8 +128,6 @@ int main(int argc, const char *argv[])
                     freeCharDynamicArray(fileName);
                     continue; // go to the next loop
                 }
-                // TEST:
-                fprintf(stderr, "content: %s\n", content);
                 // check the message from server is "No such file." or not.
                 if (strcmp(content, "No such file.\004") == 0)
                 {

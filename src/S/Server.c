@@ -213,13 +213,9 @@ void serviceClient(int clientDescriber)
                     // read a file from fileDescriptor
                     fileContent = readAFileFrom(fileDescriptor);
 
-                    // TEST:
-                    fprintf(stderr, "fileContent: %s\n", fileContent);
-
                     // show a message that indicate the file transfer is begin.
                     fprintf(stderr, "file gonna send.\n");
                     // send file content to client.
-                    // ERROR: SOMETHING BLOCK THE write()?
                     if (write(clientDescriber, fileContent, strlen(fileContent) + 1) == -1)
                     {
                         // error handle
@@ -234,14 +230,9 @@ void serviceClient(int clientDescriber)
                         exit(1); // error exit child thread
                     }
 
-                    // TEST:
-                    fprintf(stderr, "fileContent: %s\n", fileContent);
-
                     // show a message that indicate the file transfer is successfully finished.
                     fprintf(stderr, "GET SUCCESS: File tranfer finished.\n\n");
 
-                    // FIXME: Is this useful?
-                    /**
                     // send EOT to client.
                     if (write(clientDescriber, &EOT, 1) == -1)
                     {
@@ -256,7 +247,6 @@ void serviceClient(int clientDescriber)
                         close(fileDescriptor);
                         exit(1); // error exit child thread
                     }
-                     **/
 
                     // free the dynamic char array
                     freeCharDynamicArray(fileContent);
