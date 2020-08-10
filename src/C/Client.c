@@ -45,6 +45,7 @@ int main(int argc, const char *argv[])
     serverAddress.sin_port = htons((uint16_t) portNumber); // 16-bit port number
 
     // tranfer string IPv4 address to binary IPv4 address and give it to sin_addr.
+    // UWindsor ALPHA server: 137.207.82.51
     if (inet_pton(AF_INET, "127.0.0.1", &serverAddress.sin_addr) < 0)
     {
         // Error handle
